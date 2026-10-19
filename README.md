@@ -5,3 +5,5 @@ steps to use:
 2. open the GitHub io site jordy392012.github.io/ambientmapper
 3. connect to your esp via bluetooth
 4. your done!
+
+IMPORTANT: if you would like to access the web UI on your iphone go to the same website but you must download the safari extension "beacio" https://apps.apple.com/us/app/beacio/id6761301368 then allow for all websites and add as an extension for safari. This is needed because safari does not have web Bluetooth. I don't know how it works on Android though I haven't tried
