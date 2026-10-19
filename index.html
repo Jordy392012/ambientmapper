@@ -2,30 +2,176 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AmbientMapper</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>AmbientMapper — Offline Map</title>
 <style>
-:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#0b1118;color:#e9f1fb}*{box-sizing:border-box}body{margin:0;max-width:850px;padding:18px;margin-inline:auto}h1{margin-bottom:4px}p{color:#aebed0}.panel{background:#131d29;border:1px solid #28394c;border-radius:14px;padding:15px;margin:14px 0}.row{display:flex;gap:9px;flex-wrap:wrap}button,input{font:inherit;border-radius:9px;padding:11px;border:1px solid #3b5067}button{background:#2463eb;color:white;border:0;font-weight:650;cursor:pointer;min-height:43px}button:disabled{opacity:.45;cursor:not-allowed}.danger{background:#a92c39}.muted{background:#344356}#status,#message{white-space:pre-wrap;color:#b8c9dc;font-size:.92rem}#places{display:grid;gap:8px}.place{border:1px solid #35475c;border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px}.place.selected{border-color:#65a5ff;background:#1a2b40}.place label{display:flex;gap:10px;align-items:center;flex:1;min-width:0}.place small{display:block;color:#9fb1c5}.place input{padding:0}.placeName{overflow-wrap:anywhere}.warn{color:#ffb6bd}button:focus-visible,input:focus-visible{outline:2px solid #8bbcff;outline-offset:2px}
+:root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1118;color:#e9f1fb;--panel:#131d29;--border:#28394c;--muted:#aebed0;--blue:#2463eb;--mint:#71e0c0}
+*{box-sizing:border-box}body{margin:0;max-width:1000px;padding:clamp(12px,3vw,24px);padding-bottom:calc(24px + env(safe-area-inset-bottom));margin-inline:auto}h1{margin:0 0 4px;font-size:clamp(1.7rem,5vw,2.2rem)}h2{margin:0 0 8px;font-size:1.17rem}p{color:var(--muted);line-height:1.5}.intro{margin-top:0}.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:clamp(12px,3vw,18px);margin:14px 0;min-width:0}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}button,input{font:inherit;border-radius:10px;padding:10px 12px;border:1px solid #3b5067}button{background:var(--blue);color:white;border:0;font-weight:650;cursor:pointer;min-height:42px}button:disabled{opacity:.42;cursor:not-allowed}.danger{background:#a92c39}.muted{background:#344356}.subtle{background:#203145;border:1px solid #3a526c}#status,#message{white-space:pre-wrap;color:#b8c9dc;font-size:.92rem;overflow-wrap:anywhere}#message{min-height:1.3em}#places{display:grid;gap:8px}.place{border:1px solid #35475c;border-radius:10px;padding:11px;display:flex;align-items:center;gap:10px}.place.selected{border-color:#65a5ff;background:#1a2b40}.place label{display:flex;gap:10px;align-items:center;flex:1;min-width:0;cursor:pointer}.place small{display:block;color:#9fb1c5;margin-top:2px}.place input{padding:0;accent-color:#65a5ff}.placeName{overflow-wrap:anywhere}.warn{color:#ffb6bd}input[type=text],#newName{min-width:150px;flex:1;background:#0c1520;color:#e9f1fb}button:focus-visible,input:focus-visible{outline:2px solid #8bbcff;outline-offset:2px}
+.map-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.map-top p{margin:4px 0 10px}.map-tools{display:flex;gap:7px;flex-wrap:wrap}.map-tools button{min-width:42px}.map-frame{position:relative;overflow:hidden;border:1px solid #2b4054;border-radius:12px;background-color:#0b141f;background-image:radial-gradient(#26384a 1px,transparent 1px);background-size:20px 20px;touch-action:pan-y}.map-frame svg{display:block;width:100%;height:clamp(310px,58vw,590px);touch-action:none;user-select:none;-webkit-user-select:none}.map-empty{display:grid;place-content:center;min-height:300px;text-align:center;padding:26px;color:#aebed0}.map-stats{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.85rem;color:#9fb1c5;margin-top:10px}.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;font-size:.84rem;color:#b4c5d7}.legend span{display:inline-flex;align-items:center;gap:6px}.dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:2px solid #6b91b8;background:#1d3349}.dot.current{background:#71e0c0;border-color:#b3ffe9}.line-key{width:24px;height:3px;display:inline-block;background:#7892ad;border-radius:4px}.map-hint{font-size:.85rem;margin-bottom:0}.place-node{cursor:pointer;outline:none}.place-node:focus .node-ring{stroke:#fff;stroke-width:4}.node-ring{fill:none;stroke:transparent;stroke-width:4}.node-core{fill:#1d3349;stroke:#7297be;stroke-width:2.5}.place-node.current .node-core{fill:#155447;stroke:#71e0c0;stroke-width:3}.place-node.selected .node-ring{stroke:#75aaff;stroke-width:4}.node-id{fill:#f2f7ff;font-size:12px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none}.node-name{fill:#e6eef9;font-size:13px;font-weight:650;text-anchor:middle;paint-order:stroke;stroke:#0b141f;stroke-width:4px;stroke-linejoin:round;pointer-events:none}.edge-path{fill:none;stroke:#6c829b;stroke-linecap:round;opacity:.82}.edge-path.current-edge{stroke:#71e0c0;opacity:.95}.edge-label{font-size:11px;font-weight:750;fill:#c5d4e5;text-anchor:middle;paint-order:stroke;stroke:#0b141f;stroke-width:4px;stroke-linejoin:round;pointer-events:none}.node-title{font-size:13px} @media(max-width:500px){.panel{border-radius:13px}.map-tools{width:100%}.map-tools button{flex:1}.map-frame svg{height:390px}#newName{flex-basis:100%}}
 </style>
 </head>
 <body>
-<h1>AmbientMapper</h1><p>Learn familiar Wi-Fi environments and routes. This map is a learned topology, not GPS.</p>
-<div class="panel"><div class="row"><button id="connect">Connect to device</button><button id="refresh" class="muted" disabled>Refresh map</button><button id="predict" class="muted" disabled>Predict</button></div><p id="status">Not connected.</p><p id="message" role="status"></p></div>
-<div class="panel"><h2>Places</h2><p>Select one place to rename or delete it.</p><div id="places">Connect, then refresh the map.</div><div class="row" style="margin-top:12px"><input id="newName" placeholder="New place name" maxlength="31" aria-label="New place name"><button id="rename" class="muted" disabled>Rename selected</button><button id="delete" class="danger" disabled>Delete selected</button></div></div>
+<h1>AmbientMapper</h1>
+<p class="intro">Learn familiar Wi-Fi environments and the routes between them. Everything in this page runs locally; the map is a learned topology, not GPS or a scaled floor plan.</p>
+<div class="panel">
+  <div class="row"><button id="connect">Connect to device</button><button id="refresh" class="muted" disabled>Refresh map</button><button id="predict" class="muted" disabled>Predict next place</button></div>
+  <p id="status">Not connected.</p><p id="message" role="status" aria-live="polite"></p>
+</div>
+<div class="panel" id="mapPanel">
+  <div class="map-top"><div><h2>Learned route map</h2><p>Each circle is a learned place. Arrows show observed direction; thicker arrows mean that transition was seen more often.</p></div>
+    <div class="map-tools" aria-label="Map controls"><button id="zoomIn" class="subtle" title="Zoom in" aria-label="Zoom in">+</button><button id="zoomOut" class="subtle" title="Zoom out" aria-label="Zoom out">−</button><button id="fitMap" class="muted">Fit map</button></div>
+  </div>
+  <div id="mapEmpty" class="map-empty">Connect to AmbientMapper and refresh the map to see learned places and routes.</div>
+  <div id="mapCanvas" class="map-frame" hidden>
+    <svg id="graph" viewBox="0 0 1000 620" role="img" aria-label="Topological map of learned places and directed routes">
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8299b3"/></marker><marker id="arrowCurrent" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#71e0c0"/></marker></defs>
+      <g id="graphLayer"></g>
+    </svg>
+  </div>
+  <div class="map-stats"><span id="mapStats">0 places · 0 directed routes</span><span id="mapCurrent">Current place: unknown</span></div>
+  <div class="legend"><span><i class="dot current"></i> Current place</span><span><i class="dot"></i> Learned place</span><span><i class="line-key"></i> Observed route</span></div>
+  <p class="map-hint">Tap a node to select it. You can then rename or delete it below. Drag empty map space to pan; use + / − or Fit map to navigate.</p>
+</div>
+<div class="panel"><h2>Places</h2><p>Choose a place to rename or delete it. Selecting a place here also highlights it on the map.</p><div id="places">Connect, then refresh the map.</div><div class="row" style="margin-top:12px"><input id="newName" type="text" placeholder="New place name" maxlength="31" aria-label="New place name"><button id="rename" class="muted" disabled>Rename selected</button><button id="delete" class="danger" disabled>Delete selected</button></div></div>
 <div class="panel"><h2>Tracking</h2><div class="row"><button id="pause" class="muted" disabled>Pause learning</button><button id="resume" class="muted" disabled>Resume learning</button><button id="reset" class="danger" disabled>Reset all places</button></div><p class="warn">Reset All erases the entire learned map. Delete Selected removes only one place and its route connections.</p></div>
 <script>
+'use strict';
 const SERVICE='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const RX='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 const TX='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-let device,server,rxChar,txChar,buffer='',places=[],selectedId=null;
+const NS='http://www.w3.org/2000/svg';
+const VIEW={x:0,y:0,w:1000,h:620};
+let device=null,server=null,rxChar=null,txChar=null,buffer='',places=[],edges=[],selectedId=null,currentId=0,positions=new Map();
+let viewBox={...VIEW},drag=null;
 const $=id=>document.getElementById(id);
-function msg(t){$('message').textContent=t||''}
-function connectedUi(on){for(const id of ['refresh','predict','rename','delete','pause','resume','reset'])$(id).disabled=!on;}
-function send(command){if(!rxChar){msg('Connect to AmbientMapper first.');return;}try{rxChar.writeValueWithoutResponse(new TextEncoder().encode(command));msg('Sent: '+command)}catch(e){msg('Could not send command: '+e.message)}}
-async function connect(){if(!('bluetooth' in navigator)){msg('This browser does not support Web Bluetooth. Try a compatible desktop browser, or use a native iOS app.');return;}try{device=await navigator.bluetooth.requestDevice({filters:[{services:[SERVICE]}]});device.addEventListener('gattserverdisconnected',()=>{server=rxChar=txChar=null;connectedUi(false);$('status').textContent='Disconnected.';msg('Device disconnected.');});server=await device.gatt.connect();const service=await server.getPrimaryService(SERVICE);rxChar=await service.getCharacteristic(RX);txChar=await service.getCharacteristic(TX);await txChar.startNotifications();txChar.addEventListener('characteristicvaluechanged',event=>{const bytes=new Uint8Array(event.target.value.buffer,event.target.value.byteOffset,event.target.value.byteLength);buffer+=new TextDecoder().decode(bytes);let ix;while((ix=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,ix).trim();buffer=buffer.slice(ix+1);if(line){try{handle(JSON.parse(line))}catch(e){console.warn('Incomplete/invalid JSON notification',line,e)}}}});connectedUi(true);$('status').textContent='Connected to '+device.name;msg('Connected. Requesting status and map…');send('STATUS');setTimeout(()=>send('MAP'),250);}catch(e){msg('Connection failed: '+e.message)}}
-function handle(m){if(m.type==='status'){$('status').textContent=`Places: ${m.places} · Routes: ${m.edges}\nCurrent: ${m.currentName||'Unknown'} (ID ${m.current||0})\nTracking: ${m.paused?'paused':'active'} · Storage: ${m.storageOk?'OK':'RAM only'}`;}else if(m.type==='map'){places=m.places||[];renderPlaces();}else if(m.type==='prediction'){msg(`Current: ${m.currentName}\nLikely next: ${m.nextName}\nConfidence: ${Math.round((m.confidence||0)*100)}%\n${m.message||''}`)}else if(m.type==='ack'){msg(m.message||'Command acknowledged.');}}
-function renderPlaces(){const root=$('places');root.replaceChildren();if(!places.length){root.textContent='No places learned yet.';selectedId=null;updateSelectionButtons();return;}if(selectedId!==null&&!places.some(p=>p.id===selectedId))selectedId=null;for(const p of places){const card=document.createElement('div');card.className='place'+(selectedId===p.id?' selected':'');const label=document.createElement('label');const radio=document.createElement('input');radio.type='radio';radio.name='selectedPlace';radio.checked=selectedId===p.id;radio.addEventListener('change',()=>{selectedId=p.id;renderPlaces()});const name=document.createElement('span');name.className='placeName';name.textContent=p.name||p.label||('Place '+p.id);const details=document.createElement('small');details.textContent=`ID ${p.id} · ${p.visits||0} visits · ${p.apCount||0} access points${p.current?' · CURRENT':''}`;name.appendChild(details);label.append(radio,name);card.append(label);root.append(card);}updateSelectionButtons();}
-function updateSelectionButtons(){const ok=!!rxChar&&selectedId!==null&&places.some(p=>p.id===selectedId);$('rename').disabled=!ok;$('delete').disabled=!ok;}
-$('connect').addEventListener('click',connect);$('refresh').addEventListener('click',()=>send('MAP'));$('predict').addEventListener('click',()=>send('PREDICT'));$('pause').addEventListener('click',()=>send('PAUSE'));$('resume').addEventListener('click',()=>send('RESUME'));$('reset').addEventListener('click',()=>{if(confirm('Erase ALL places and routes? This cannot be undone.'))send('RESET')});$('rename').addEventListener('click',()=>{const name=$('newName').value.trim();if(!name){msg('Enter a name first.');return;}if(selectedId!==null)send(`LABEL ${selectedId} ${name}`)});$('delete').addEventListener('click',()=>{if(selectedId===null)return;const p=places.find(x=>x.id===selectedId);if(confirm(`Delete ${p?.name||p?.label||'this place'} (ID ${selectedId}) and every route connected to it? This cannot be undone.`))send(`DELETE ${selectedId}`)});
+function msg(t){$('message').textContent=t||'';}
+function connectedUi(on){for(const id of ['refresh','predict','pause','resume','reset'])$(id).disabled=!on;updateSelectionButtons();}
+function send(command){if(!rxChar){msg('Connect to AmbientMapper first.');return;}try{rxChar.writeValueWithoutResponse(new TextEncoder().encode(command));msg('Sent: '+command);}catch(e){msg('Could not send command: '+e.message);}}
+async function connect(){
+  if(!('bluetooth' in navigator)){msg('This browser does not support Web Bluetooth. Use a compatible browser/device for BLE access.');return;}
+  try{
+    device=await navigator.bluetooth.requestDevice({filters:[{services:[SERVICE]}]});
+    device.addEventListener('gattserverdisconnected',()=>{server=rxChar=txChar=null;connectedUi(false);$('status').textContent='Disconnected.';msg('Device disconnected.');});
+    server=await device.gatt.connect();const service=await server.getPrimaryService(SERVICE);
+    rxChar=await service.getCharacteristic(RX);txChar=await service.getCharacteristic(TX);
+    await txChar.startNotifications();
+    txChar.addEventListener('characteristicvaluechanged',event=>{
+      const bytes=new Uint8Array(event.target.value.buffer,event.target.value.byteOffset,event.target.value.byteLength);
+      buffer+=new TextDecoder().decode(bytes);let ix;
+      while((ix=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,ix).trim();buffer=buffer.slice(ix+1);if(line){try{handle(JSON.parse(line));}catch(e){console.warn('Incomplete/invalid JSON notification',e);}}}
+      // Do not retain an unbounded string if a malformed packet lacks its newline.
+      if(buffer.length>100000)buffer='';
+    });
+    connectedUi(true);$('status').textContent='Connected to '+(device.name||'AmbientMapper');msg('Connected. Requesting status and map…');send('STATUS');setTimeout(()=>send('MAP'),250);
+  }catch(e){msg('Connection failed: '+e.message);}
+}
+function handle(m){
+  if(m.type==='status'){
+    if(Number.isFinite(Number(m.current)))currentId=Number(m.current);
+    $('status').textContent=`Places: ${m.places} · Directed routes: ${m.edges}\nCurrent: ${m.currentName||'Unknown'} (ID ${m.current||0})\nTracking: ${m.paused?'paused':'active'} · Storage: ${m.storageOk?'OK':'RAM only'}`;
+    $('mapCurrent').textContent='Current place: '+(m.currentName||'unknown');renderGraph();
+  }else if(m.type==='map'){
+    places=Array.isArray(m.places)?m.places:[];edges=Array.isArray(m.edges)?m.edges:[];
+    if(Number.isFinite(Number(m.current)))currentId=Number(m.current);
+    layoutGraph();renderPlaces();renderGraph();
+    $('status').textContent=`Places: ${places.length} · Directed routes: ${edges.length}\nCurrent: ${placeName(currentId)} (ID ${currentId||0})\nTracking: ${m.paused?'paused':'active'} · Storage: ${m.storageOk?'OK':'RAM only'}`;
+    $('mapCurrent').textContent='Current place: '+(currentId?placeName(currentId):'unknown');
+  }else if(m.type==='prediction'){
+    msg(`Current: ${m.currentName}\nLikely next: ${m.nextName}\nConfidence: ${Math.round((m.confidence||0)*100)}%\n${m.message||''}`);
+  }else if(m.type==='ack'){
+    msg(m.message||'Command acknowledged.');if(/deleted|updated|reset/i.test(m.message||''))send('MAP');
+  }
+}
+function placeName(id){const p=places.find(x=>Number(x.id)===Number(id));return p?(p.name||p.label||('Place '+p.id)):'Unknown';}
+function svgEl(tag,attrs={},textValue=null){const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));if(textValue!==null)el.textContent=textValue;return el;}
+function layoutGraph(){
+  positions=new Map();const n=places.length;if(!n)return;
+  // A lightweight, deterministic force-directed layout uses only local route data.
+  // Very large graphs fall back to a circular layout to keep older phones responsive.
+  const nodes=places.map((p,i)=>({id:Number(p.id),x:500+Math.cos(2*Math.PI*i/n- Math.PI/2)*Math.min(260,70+n*13),y:310+Math.sin(2*Math.PI*i/n-Math.PI/2)*Math.min(205,60+n*10)}));
+  if(n>180){nodes.forEach(p=>positions.set(p.id,{x:p.x,y:p.y}));return;}
+  const index=new Map(nodes.map((p,i)=>[p.id,i]));const pairs=new Set();
+  for(const e of edges){const a=index.get(Number(e.from)),b=index.get(Number(e.to));if(a===undefined||b===undefined||a===b)continue;pairs.add(Math.min(a,b)+':'+Math.max(a,b));}
+  const area=820*470,k=Math.sqrt(area/n);let temp=75;
+  for(let iter=0;iter<95;iter++){
+    const dx=new Array(n).fill(0),dy=new Array(n).fill(0);
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+      let vx=nodes[i].x-nodes[j].x,vy=nodes[i].y-nodes[j].y;let d2=vx*vx+vy*vy;
+      if(d2<0.05){vx=(i+1)*0.13;vy=(j+1)*0.17;d2=vx*vx+vy*vy;}
+      const d=Math.sqrt(d2),f=(k*k)/d;const fx=vx/d*f,fy=vy/d*f;dx[i]+=fx;dy[i]+=fy;dx[j]-=fx;dy[j]-=fy;
+    }
+    for(const pair of pairs){const [ai,bi]=pair.split(':').map(Number);let vx=nodes[bi].x-nodes[ai].x,vy=nodes[bi].y-nodes[ai].y;const d=Math.max(0.1,Math.hypot(vx,vy));const f=(d*d)/k*0.75;const fx=vx/d*f,fy=vy/d*f;dx[ai]+=fx;dy[ai]+=fy;dx[bi]-=fx;dy[bi]-=fy;}
+    for(let i=0;i<n;i++){const mag=Math.max(0.01,Math.hypot(dx[i],dy[i]));nodes[i].x+=dx[i]/mag*Math.min(mag,temp);nodes[i].y+=dy[i]/mag*Math.min(mag,temp);nodes[i].x=Math.max(40,Math.min(960,nodes[i].x));nodes[i].y=Math.max(38,Math.min(585,nodes[i].y));}
+    temp*=0.965;
+  }
+  // Normalize to the drawable area, preserving the graph's overall shape.
+  const minX=Math.min(...nodes.map(p=>p.x)),maxX=Math.max(...nodes.map(p=>p.x));const minY=Math.min(...nodes.map(p=>p.y)),maxY=Math.max(...nodes.map(p=>p.y));
+  const sx=maxX-minX||1,sy=maxY-minY||1;const scale=Math.min(820/sx,450/sy,1.25);
+  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+  for(const p of nodes)positions.set(p.id,{x:500+(p.x-cx)*scale,y:310+(p.y-cy)*scale});
+}
+function edgePath(e,hasReverse){
+  const a=positions.get(Number(e.from)),b=positions.get(Number(e.to));if(!a||!b)return null;
+  const vx=b.x-a.x,vy=b.y-a.y,d=Math.hypot(vx,vy)||1;const nx=-vy/d,ny=vx/d;
+  let off=0;if(hasReverse){off=(Number(e.from)<Number(e.to)?1:-1)*19;}
+  const c={x:(a.x+b.x)/2+nx*off,y:(a.y+b.y)/2+ny*off};
+  const rA=Number(e.from)===currentId?31:27,rB=Number(e.to)===currentId?31:27;
+  const u1=Math.hypot(c.x-a.x,c.y-a.y)||1,u2=Math.hypot(b.x-c.x,b.y-c.y)||1;
+  const sx=a.x+(c.x-a.x)/u1*rA,sy=a.y+(c.y-a.y)/u1*rA;
+  const ex=b.x-(b.x-c.x)/u2*rB,ey=b.y-(b.y-c.y)/u2*rB;
+  return {d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${c.x.toFixed(1)} ${c.y.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,label:{x:0.25*sx+0.5*c.x+0.25*ex,y:0.25*sy+0.5*c.y+0.25*ey}};
+}
+function renderGraph(){
+  const layer=$('graphLayer');layer.replaceChildren();
+  $('mapStats').textContent=`${places.length} place${places.length===1?'':'s'} · ${edges.length} directed route${edges.length===1?'':'s'}`;
+  $('mapEmpty').hidden=places.length>0;$('mapCanvas').hidden=places.length===0;
+  if(!places.length){$('mapEmpty').textContent=rxChar?'No places learned yet. Keep AmbientMapper scanning, then refresh.':'Connect to AmbientMapper and refresh the map to see learned places and routes.';return;}
+  const edgeLookup=new Set(edges.map(e=>`${Number(e.from)}>${Number(e.to)}`));
+  for(const e of edges){
+    if(!positions.has(Number(e.from))||!positions.has(Number(e.to)))continue;
+    const rev=edgeLookup.has(`${Number(e.to)}>${Number(e.from)}`);const shape=edgePath(e,rev);if(!shape)continue;
+    const count=Math.max(1,Number(e.count)||1);const currentEdge=Number(e.from)===currentId;
+    const path=svgEl('path',{d:shape.d,class:'edge-path'+(currentEdge?' current-edge':''),'stroke-width':Math.min(7,1.4+Math.log2(count+1)*0.9),'marker-end':currentEdge?'url(#arrowCurrent)':'url(#arrow)'});
+    const title=svgEl('title',{},`${placeName(e.from)} → ${placeName(e.to)} · observed ${count} time${count===1?'':'s'}`);path.append(title);layer.append(path);
+    if(count>1||edges.length<=7){const lab=svgEl('text',{x:shape.label.x,y:shape.label.y-5,class:'edge-label'},String(count));layer.append(lab);}
+  }
+  for(const p of places){
+    const id=Number(p.id),pt=positions.get(id);if(!pt)continue;
+    const isCurrent=id===Number(currentId),isSelected=id===Number(selectedId);
+    const g=svgEl('g',{class:'place-node'+(isCurrent?' current':'')+(isSelected?' selected':''),'data-place':id,tabindex:'0',role:'button','aria-label':`${placeName(id)}${isCurrent?', current place':''}. Select place.`});
+    g.append(svgEl('title',{},`${placeName(id)} · ID ${id} · ${p.visits||0} visits${isCurrent?' · CURRENT':''}`));
+    g.append(svgEl('circle',{cx:pt.x,cy:pt.y,r:34,class:'node-ring'}));
+    g.append(svgEl('circle',{cx:pt.x,cy:pt.y,r:isCurrent?28:25,class:'node-core'}));
+    g.append(svgEl('text',{x:pt.x,y:pt.y,class:'node-id'},String(id)));
+    const label=String(placeName(id));const safeLabel=label.length>22?label.slice(0,20)+'…':label;
+    g.append(svgEl('text',{x:pt.x,y:pt.y+(isCurrent?49:46),class:'node-name'},safeLabel));
+    g.addEventListener('click',()=>selectPlace(id));g.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();selectPlace(id);}});
+    layer.append(g);
+  }
+  applyViewBox();
+}
+function renderPlaces(){
+  const root=$('places');root.replaceChildren();
+  if(!places.length){root.textContent='No places learned yet.';selectedId=null;updateSelectionButtons();return;}
+  if(selectedId!==null&&!places.some(p=>Number(p.id)===Number(selectedId)))selectedId=null;
+  for(const p of places){const id=Number(p.id);const card=document.createElement('div');card.className='place'+(Number(selectedId)===id?' selected':'');const label=document.createElement('label');const radio=document.createElement('input');radio.type='radio';radio.name='selectedPlace';radio.checked=Number(selectedId)===id;radio.addEventListener('change',()=>selectPlace(id));const name=document.createElement('span');name.className='placeName';name.textContent=placeName(id);const details=document.createElement('small');details.textContent=`ID ${id} · ${p.visits||0} visits · ${p.apCount||0} access points${id===Number(currentId)?' · CURRENT':''}`;name.appendChild(details);label.append(radio,name);card.append(label);root.append(card);}
+  updateSelectionButtons();
+}
+function selectPlace(id){selectedId=Number(id);renderPlaces();renderGraph();updateSelectionButtons();}
+function updateSelectionButtons(){const ok=!!rxChar&&selectedId!==null&&places.some(p=>Number(p.id)===Number(selectedId));$('rename').disabled=!ok;$('delete').disabled=!ok;}
+function applyViewBox(){$('graph').setAttribute('viewBox',`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);}
+function zoom(factor){const cx=viewBox.x+viewBox.w/2,cy=viewBox.y+viewBox.h/2;const nw=Math.max(300,Math.min(1800,viewBox.w*factor)),nh=Math.max(186,Math.min(1116,viewBox.h*factor));viewBox={x:cx-nw/2,y:cy-nh/2,w:nw,h:nh};applyViewBox();}
+function fitMap(){viewBox={...VIEW};applyViewBox();}
+$('connect').addEventListener('click',connect);$('refresh').addEventListener('click',()=>send('MAP'));$('predict').addEventListener('click',()=>send('PREDICT'));$('pause').addEventListener('click',()=>send('PAUSE'));$('resume').addEventListener('click',()=>send('RESUME'));
+$('zoomIn').addEventListener('click',()=>zoom(0.8));$('zoomOut').addEventListener('click',()=>zoom(1.25));$('fitMap').addEventListener('click',fitMap);
+$('reset').addEventListener('click',()=>{if(confirm('Erase ALL places and routes? This cannot be undone.'))send('RESET');});
+$('rename').addEventListener('click',()=>{const name=$('newName').value.trim();if(!name){msg('Enter a name first.');return;}if(selectedId!==null)send(`LABEL ${selectedId} ${name}`);});
+$('delete').addEventListener('click',()=>{if(selectedId===null)return;const p=places.find(x=>Number(x.id)===Number(selectedId));if(confirm(`Delete ${p?.name||p?.label||'this place'} (ID ${selectedId}) and every route connected to it? This cannot be undone.`))send(`DELETE ${selectedId}`);});
+// Drag empty map space to pan. Tapping a node still selects it.
+$('graph').addEventListener('pointerdown',ev=>{if(ev.target.closest&&ev.target.closest('.place-node'))return;if(ev.button!==undefined&&ev.button!==0)return;drag={x:ev.clientX,y:ev.clientY,vx:viewBox.x,vy:viewBox.y};$('graph').setPointerCapture?.(ev.pointerId);});
+$('graph').addEventListener('pointermove',ev=>{if(!drag)return;const rect=$('graph').getBoundingClientRect();viewBox.x=drag.vx-(ev.clientX-drag.x)*viewBox.w/(rect.width||1);viewBox.y=drag.vy-(ev.clientY-drag.y)*viewBox.h/(rect.height||1);applyViewBox();});
+function stopDrag(){drag=null;}$('graph').addEventListener('pointerup',stopDrag);$('graph').addEventListener('pointercancel',stopDrag);$('graph').addEventListener('lostpointercapture',stopDrag);
 </script>
-</body></html>
+</body>
+</html>
