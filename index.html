@@ -34,6 +34,8 @@
   <p class="map-hint">Tap a node to select it. You can then rename or delete it below. Drag empty map space to pan; use + / − or Fit map to navigate.</p>
 </div>
 <div class="panel"><h2>Places</h2><p>Choose a place to rename or delete it. Selecting a place here also highlights it on the map.</p><div id="places">Connect, then refresh the map.</div><div class="row" style="margin-top:12px"><input id="newName" type="text" placeholder="New place name" maxlength="31" aria-label="New place name"><button id="rename" class="muted" disabled>Rename selected</button><button id="delete" class="danger" disabled>Delete selected</button></div></div>
+<div class="panel"><h2>Possible duplicate places</h2><p>AmbientMapper compares stored Wi-Fi fingerprints and suggests likely duplicates. Select the source place in the Places list, then choose the target to keep. Suggestions are never merged automatically, so you can review them first.</p><div id="duplicates">Connect and refresh to check for similar places.</div><div class="row" style="margin-top:12px"><label for="mergeTarget">Keep this place:</label><select id="mergeTarget" style="background:#0c1520;color:#e9f1fb;padding:10px;border-radius:10px;max-width:100%"></select><button id="merge" class="muted" disabled>Merge selected into target</button></div></div>
+<div class="panel"><h2>Route editor</h2><p>Remove a directed route that was learned incorrectly. This does not delete either place. Deleted routes can be relearned if that transition is observed again.</p><div id="routeEditor">Connect and refresh to edit routes.</div></div>
 <div class="panel"><h2>Tracking</h2><div class="row"><button id="pause" class="muted" disabled>Pause learning</button><button id="resume" class="muted" disabled>Resume learning</button><button id="reset" class="danger" disabled>Reset all places</button></div><p class="warn">Reset All erases the entire learned map. Delete Selected removes only one place and its route connections.</p></div>
 <script>
 'use strict';
@@ -42,7 +44,7 @@ const RX='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 const TX='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 const NS='http://www.w3.org/2000/svg';
 const VIEW={x:0,y:0,w:1000,h:620};
-let device=null,server=null,rxChar=null,txChar=null,buffer='',places=[],edges=[],selectedId=null,currentId=0,positions=new Map();
+let device=null,server=null,rxChar=null,txChar=null,buffer='',places=[],edges=[],duplicates=[],selectedId=null,currentId=0,positions=new Map();
 let viewBox={...VIEW},drag=null;
 const $=id=>document.getElementById(id);
 function msg(t){$('message').textContent=t||'';}
@@ -72,15 +74,15 @@ function handle(m){
     $('status').textContent=`Places: ${m.places} · Directed routes: ${m.edges}\nCurrent: ${m.currentName||'Unknown'} (ID ${m.current||0})\nTracking: ${m.paused?'paused':'active'} · Storage: ${m.storageOk?'OK':'RAM only'}`;
     $('mapCurrent').textContent='Current place: '+(m.currentName||'unknown');renderGraph();
   }else if(m.type==='map'){
-    places=Array.isArray(m.places)?m.places:[];edges=Array.isArray(m.edges)?m.edges:[];
+    places=Array.isArray(m.places)?m.places:[];edges=Array.isArray(m.edges)?m.edges:[];duplicates=Array.isArray(m.duplicates)?m.duplicates:[];
     if(Number.isFinite(Number(m.current)))currentId=Number(m.current);
-    layoutGraph();renderPlaces();renderGraph();
+    layoutGraph();renderPlaces();renderGraph();renderDuplicates();renderRouteEditor();renderMergeTargets();
     $('status').textContent=`Places: ${places.length} · Directed routes: ${edges.length}\nCurrent: ${placeName(currentId)} (ID ${currentId||0})\nTracking: ${m.paused?'paused':'active'} · Storage: ${m.storageOk?'OK':'RAM only'}`;
     $('mapCurrent').textContent='Current place: '+(currentId?placeName(currentId):'unknown');
   }else if(m.type==='prediction'){
     msg(`Current: ${m.currentName}\nLikely next: ${m.nextName}\nConfidence: ${Math.round((m.confidence||0)*100)}%\n${m.message||''}`);
   }else if(m.type==='ack'){
-    msg(m.message||'Command acknowledged.');if(/deleted|updated|reset/i.test(m.message||''))send('MAP');
+    msg(m.message||'Command acknowledged.');if(/deleted|updated|reset|merged|merge/i.test(m.message||''))setTimeout(()=>send('MAP'),180);
   }
 }
 function placeName(id){const p=places.find(x=>Number(x.id)===Number(id));return p?(p.name||p.label||('Place '+p.id)):'Unknown';}
@@ -158,8 +160,37 @@ function renderPlaces(){
   for(const p of places){const id=Number(p.id);const card=document.createElement('div');card.className='place'+(Number(selectedId)===id?' selected':'');const label=document.createElement('label');const radio=document.createElement('input');radio.type='radio';radio.name='selectedPlace';radio.checked=Number(selectedId)===id;radio.addEventListener('change',()=>selectPlace(id));const name=document.createElement('span');name.className='placeName';name.textContent=placeName(id);const details=document.createElement('small');details.textContent=`ID ${id} · ${p.visits||0} visits · ${p.apCount||0} access points${id===Number(currentId)?' · CURRENT':''}`;name.appendChild(details);label.append(radio,name);card.append(label);root.append(card);}
   updateSelectionButtons();
 }
-function selectPlace(id){selectedId=Number(id);renderPlaces();renderGraph();updateSelectionButtons();}
-function updateSelectionButtons(){const ok=!!rxChar&&selectedId!==null&&places.some(p=>Number(p.id)===Number(selectedId));$('rename').disabled=!ok;$('delete').disabled=!ok;}
+function renderDuplicates(){
+  const root=$('duplicates');root.replaceChildren();
+  if(!duplicates.length){root.textContent='No likely duplicates detected in the current fingerprints.';return;}
+  for(const d of duplicates){
+    const row=document.createElement('div');row.className='place';
+    const text=document.createElement('div');text.style.flex='1';
+    const a=places.find(p=>Number(p.id)===Number(d.a)),b=places.find(p=>Number(p.id)===Number(d.b));
+    text.textContent=`${a?.name||'Place '+d.a} ↔ ${b?.name||'Place '+d.b} · ${Math.round((Number(d.score)||0)*100)}% similarity · ${d.commonAPs} shared APs`;
+    const choose=document.createElement('button');choose.className='subtle';choose.textContent='Select pair';choose.addEventListener('click',()=>{selectPlace(Number(d.a));$('mergeTarget').value=String(d.b);updateMergeButton();});
+    row.append(text,choose);root.append(row);
+  }
+}
+function renderMergeTargets(){
+  const select=$('mergeTarget');const prior=select.value;select.replaceChildren();
+  for(const p of places){if(Number(p.id)===Number(selectedId))continue;const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name||p.label||'Place '+p.id} (ID ${p.id})`;select.append(o);}
+  if([...select.options].some(o=>o.value===prior))select.value=prior;
+  updateMergeButton();
+}
+function updateMergeButton(){ $('merge').disabled=!rxChar||selectedId===null||!$('mergeTarget').value||Number($('mergeTarget').value)===Number(selectedId); }
+function renderRouteEditor(){
+  const root=$('routeEditor');root.replaceChildren();
+  if(!edges.length){root.textContent='No directed routes to edit.';return;}
+  for(const e of edges){
+    const row=document.createElement('div');row.className='place';const label=document.createElement('span');label.style.flex='1';
+    label.textContent=`${placeName(e.from)} → ${placeName(e.to)} · ${e.count||1} observation${Number(e.count)===1?'':'s'}`;
+    const del=document.createElement('button');del.className='danger';del.textContent='Remove route';del.addEventListener('click',()=>{if(confirm(`Remove the directed route ${placeName(e.from)} → ${placeName(e.to)}? The places will remain.`))send(`DELETEEDGE ${Number(e.from)} ${Number(e.to)}`);});
+    row.append(label,del);root.append(row);
+  }
+}
+function selectPlace(id){selectedId=Number(id);renderPlaces();renderGraph();updateSelectionButtons();renderMergeTargets();}
+function updateSelectionButtons(){const ok=!!rxChar&&selectedId!==null&&places.some(p=>Number(p.id)===Number(selectedId));$('rename').disabled=!ok;$('delete').disabled=!ok;if($('merge'))updateMergeButton();}
 function applyViewBox(){$('graph').setAttribute('viewBox',`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);}
 function zoom(factor){const cx=viewBox.x+viewBox.w/2,cy=viewBox.y+viewBox.h/2;const nw=Math.max(300,Math.min(1800,viewBox.w*factor)),nh=Math.max(186,Math.min(1116,viewBox.h*factor));viewBox={x:cx-nw/2,y:cy-nh/2,w:nw,h:nh};applyViewBox();}
 function fitMap(){viewBox={...VIEW};applyViewBox();}
@@ -167,6 +198,7 @@ $('connect').addEventListener('click',connect);$('refresh').addEventListener('cl
 $('zoomIn').addEventListener('click',()=>zoom(0.8));$('zoomOut').addEventListener('click',()=>zoom(1.25));$('fitMap').addEventListener('click',fitMap);
 $('reset').addEventListener('click',()=>{if(confirm('Erase ALL places and routes? This cannot be undone.'))send('RESET');});
 $('rename').addEventListener('click',()=>{const name=$('newName').value.trim();if(!name){msg('Enter a name first.');return;}if(selectedId!==null)send(`LABEL ${selectedId} ${name}`);});
+$('mergeTarget').addEventListener('change',updateMergeButton);$('merge').addEventListener('click',()=>{const source=Number(selectedId),target=Number($('mergeTarget').value);if(!source||!target||source===target)return;const a=placeName(source),b=placeName(target);if(confirm(`Merge ${a} into ${b}? The target place keeps its fingerprint and name; visit counts and routes are combined. This cannot be undone.`))send(`MERGE ${source} ${target}`);});
 $('delete').addEventListener('click',()=>{if(selectedId===null)return;const p=places.find(x=>Number(x.id)===Number(selectedId));if(confirm(`Delete ${p?.name||p?.label||'this place'} (ID ${selectedId}) and every route connected to it? This cannot be undone.`))send(`DELETE ${selectedId}`);});
 // Drag empty map space to pan. Tapping a node still selects it.
 $('graph').addEventListener('pointerdown',ev=>{if(ev.target.closest&&ev.target.closest('.place-node'))return;if(ev.button!==undefined&&ev.button!==0)return;drag={x:ev.clientX,y:ev.clientY,vx:viewBox.x,vy:viewBox.y};$('graph').setPointerCapture?.(ev.pointerId);});
