@@ -1,4 +1,4 @@
-This project uses an ESP32-S3 to make a digital map by detecting common signals around it to recognize locations
+This project uses an ESP32-S3 (but it may work on others) to make a digital map by detecting common signals around it to recognize locations
 it uses bluetooth
 steps to use:
 1. Install the .ino onto the esp32 via Arduino IDE
